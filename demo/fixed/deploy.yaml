@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: schedule-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: schedule-app
+  template:
+    metadata:
+      labels:
+        app: schedule-app
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+      containers:
+        - name: schedule-app
+          image: schedule-app:1.4.2
+          env:
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: schedule-app-secrets
+                  key: database-password
+          ports:
+            - containerPort: 8080
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8080

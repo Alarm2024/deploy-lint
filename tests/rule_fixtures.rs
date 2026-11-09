@@ -91,7 +91,7 @@ fn dl003_docker_secret_bad_masks_value_in_json() {
     use assert_cmd::Command;
 
     let path = fixture("docker/dl003-secret-bad/Dockerfile");
-    let output = Command::cargo_bin("deploy-lint")
+    let output = Command::cargo_bin("preflight")
         .unwrap()
         .arg("--json")
         .arg(&path)
@@ -111,7 +111,7 @@ fn dl003_k8s_secret_bad_masks_value_in_json() {
     use assert_cmd::Command;
 
     let path = fixture("k8s/dl003-secret-bad.yaml");
-    let output = Command::cargo_bin("deploy-lint")
+    let output = Command::cargo_bin("preflight")
         .unwrap()
         .arg("--json")
         .arg(&path)

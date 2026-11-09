@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: schedule-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: schedule-app
+  template:
+    metadata:
+      labels:
+        app: schedule-app
+    spec:
+      containers:
+        - name: schedule-app
+          image: schedule-app:latest
+          env:
+            - name: DATABASE_PASSWORD
+              value: schedule-app-demo-bad-password-do-not-use
+          ports:
+            - containerPort: 8080

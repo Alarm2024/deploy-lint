@@ -1,0 +1,109 @@
+name: Preflight
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+  security-events: write
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cargo test
+        run: cargo test --locked
+
+      - name: Build Preflight
+        run: cargo build --locked
+
+      - name: Verify fictional demo (fixed must pass)
+        run: |
+          cargo run --quiet -- demo/fixed
+          test $? -eq 0
+
+      - name: Preflight changed deploy files
+        id: scan
+        run: |
+          set -euo pipefail
+          mapfile -t FILES < <(
+            git diff --name-only "${{ github.event.pull_request.base.sha }}" HEAD \
+              | grep -E '(Dockerfile|dockerfile|Containerfile|containerfile|\.ya?ml|\.service)$' || true
+          )
+          if [[ ${#FILES[@]} -eq 0 ]]; then
+            echo "No deploy files changed in this PR."
+            echo "sarif_path=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          SARIF_PARTS=()
+          for f in "${FILES[@]}"; do
+            if [[ -f "$f" ]]; then
+              cargo run --quiet -- --ci "$f" | tee -a preflight-ci.log
+              PART="${RUNNER_TEMP}/preflight-$(echo "$f" | tr '/' '_').sarif"
+              cargo run --quiet -- --sarif "$f" > "$PART"
+              SARIF_PARTS+=("$PART")
+            fi
+          done
+          SARIF_PATH="${RUNNER_TEMP}/preflight.sarif"
+          if [[ ${#SARIF_PARTS[@]} -eq 1 ]]; then
+            cp "${SARIF_PARTS[0]}" "$SARIF_PATH"
+          else
+            jq -s '{
+              "$schema": .[0]."$schema",
+              version: .[0].version,
+              runs: [{
+                tool: .[0].runs[0].tool,
+                results: (map(.runs[0].results) | add)
+              }]
+            }' "${SARIF_PARTS[@]}" > "$SARIF_PATH"
+          fi
+          echo "sarif_path=$SARIF_PATH" >> "$GITHUB_OUTPUT"
+
+      - name: Upload SARIF to code scanning
+        if: steps.scan.outputs.sarif_path != ''
+        continue-on-error: true
+        id: upload_sarif
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: ${{ steps.scan.outputs.sarif_path }}
+          category: preflight
+
+      - name: Note when code scanning is unavailable
+        if: steps.scan.outputs.sarif_path != '' && steps.upload_sarif.outcome == 'failure'
+        run: echo "Code scanning is not enabled for this repository; SARIF upload skipped."
+
+      - name: Post PR review comments
+        if: github.event_name == 'pull_request'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          chmod +x .github/scripts/post-preflight-pr-comments.sh
+          mapfile -t FILES < <(
+            git diff --name-only "${{ github.event.pull_request.base.sha }}" HEAD \
+              | grep -E '(Dockerfile|dockerfile|Containerfile|containerfile|\.ya?ml|\.service)$' || true
+          )
+          if [[ ${#FILES[@]} -eq 0 ]]; then
+            echo "No deploy files to comment on."
+            exit 0
+          fi
+          DEPLOY_FILES=()
+          for f in "${FILES[@]}"; do
+            if [[ -f "$f" ]]; then
+              DEPLOY_FILES+=("$f")
+            fi
+          done
+          if [[ ${#DEPLOY_FILES[@]} -eq 0 ]]; then
+            exit 0
+          fi
+          .github/scripts/post-preflight-pr-comments.sh "${DEPLOY_FILES[@]}"

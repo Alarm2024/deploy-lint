@@ -7,7 +7,7 @@ license = "MIT"
 readme = "README.md"
 
 [[bin]]
-name = "deploy-lint"
+name = "preflight"
 path = "src/main.rs"
 
 [dependencies]

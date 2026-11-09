@@ -1,0 +1,9 @@
+[Unit]
+Description=Schedule app (fictional demo — intentionally misconfigured)
+
+[Service]
+ExecStart=/usr/local/bin/schedule-app
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,12 @@
+[Unit]
+Description=Schedule app (fictional demo)
+
+[Service]
+ExecStart=/usr/local/bin/schedule-app
+User=schedule
+Restart=always
+RestartSec=5
+StartLimitBurst=3
+
+[Install]
+WantedBy=multi-user.target
