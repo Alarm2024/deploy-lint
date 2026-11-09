@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: init-priv
+spec:
+  template:
+    spec:
+      initContainers:
+        - name: setup
+          image: setup:1.0.0
+          securityContext:
+            privileged: true
+      containers:
+        - name: app
+          image: app:1.0.0
+          resources:
+            limits:
+              memory: 128Mi
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8080

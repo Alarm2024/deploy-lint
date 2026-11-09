@@ -75,6 +75,18 @@ rule_good!(dl004_k8s_limits_good, "k8s/dl004-limits-good.yaml", "DL004");
 rule_bad!(dl005_k8s_probe_bad, "k8s/dl005-probe-bad.yaml", "DL005");
 rule_good!(dl005_k8s_probe_good, "k8s/dl005-probe-good.yaml", "DL005");
 
+rule_bad!(dl007_privileged_bad, "k8s/dl007-privileged-bad.yaml", "DL007");
+rule_bad!(dl007_allow_esc_bad, "k8s/dl007-allow-esc-bad.yaml", "DL007");
+rule_good!(dl007_privileged_good, "k8s/dl007-privileged-good.yaml", "DL007");
+rule_bad!(dl007_init_bad, "k8s/dl007-init-bad.yaml", "DL007");
+rule_bad!(dl007_multidoc_bad, "k8s/dl007-multidoc.yaml", "DL007");
+
+#[test]
+fn dl007_malformed_yaml_does_not_panic() {
+    let path = fixture("k8s/dl007-malformed.yaml");
+    let _ = lint_path(&path).expect("lint must not error on malformed yaml");
+}
+
 rule_bad!(
     dl006_systemd_restart_bad,
     "systemd/dl006-restart-bad.service",

@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: unrelated
+data:
+  key: value
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: second-doc
+spec:
+  containers:
+    - name: side
+      image: side:1.0.0
+      securityContext:
+        allowPrivilegeEscalation: true
+      resources:
+        limits:
+          memory: 64Mi
+      livenessProbe:
+        exec:
+          command: ["true"]

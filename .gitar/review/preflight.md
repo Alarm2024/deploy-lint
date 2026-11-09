@@ -26,6 +26,10 @@ Dockerfiles should define a `HEALTHCHECK`. Kubernetes workloads should define `l
 
 If a unit uses `Restart=always`, set backoff such as `RestartSec` and/or `StartLimitBurst` to avoid tight restart loops.
 
+## DL007 — No privileged containers (high)
+
+In Kubernetes manifests, neither `containers` nor `initContainers` may set `securityContext.privileged: true` or `securityContext.allowPrivilegeEscalation: true`. Use `privileged: false` and `allowPrivilegeEscalation: false` (or omit them when the defaults are already safe for your policy).
+
 ## Severity and CI
 
 Any **high** finding must fail the Preflight step (non-zero exit) so the build turns red. Medium findings are reported but do not fail the job unless your team policy says otherwise.

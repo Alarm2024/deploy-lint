@@ -10,6 +10,7 @@ const DL002: &str = "DL002";
 const DL003: &str = "DL003";
 const DL004: &str = "DL004";
 const DL005: &str = "DL005";
+const DL007: &str = "DL007";
 
 #[derive(Clone)]
 struct ContainerCtx {
@@ -19,6 +20,8 @@ struct ContainerCtx {
     has_liveness: bool,
     has_readiness: bool,
     run_as_root: bool,
+    privileged: bool,
+    allow_privilege_escalation: bool,
     env_secret_names: Vec<String>,
 }
 
@@ -115,6 +118,32 @@ pub fn lint(file: &PathBuf, content: &str) -> Vec<Finding> {
                 "Use secretKeyRef, envFrom secretRef, or external secret injection",
             ));
         }
+
+        if ctx.privileged || ctx.allow_privilege_escalation {
+            let patterns = if ctx.name.is_empty() {
+                vec![
+                    "privileged: true".to_string(),
+                    "allowPrivilegeEscalation: true".to_string(),
+                    "securityContext:".to_string(),
+                ]
+            } else {
+                vec![
+                    format!("name: {}", ctx.name),
+                    "privileged: true".to_string(),
+                    "allowPrivilegeEscalation: true".to_string(),
+                ]
+            };
+            let pat_refs: Vec<&str> = patterns.iter().map(String::as_str).collect();
+            let line = line_for_pattern(content, &pat_refs);
+            findings.push(Finding::new(
+                DL007,
+                Severity::High,
+                file.clone(),
+                line,
+                format!("Container '{}' runs privileged", ctx.name),
+                "Set privileged: false and allowPrivilegeEscalation: false",
+            ));
+        }
     }
 
     dedupe_findings(&mut findings);
@@ -165,6 +194,13 @@ fn collect_from_value(value: &Value, out: &mut Vec<ContainerCtx>, pod_security: 
                     }
                 }
             }
+            if let Some(init) = find_init_containers_array(map) {
+                for c in init {
+                    if let Some(ctx) = container_from_value(c, effective_pod_sc) {
+                        out.push(ctx);
+                    }
+                }
+            }
 
             if let Some(template) = map_get(map, "template") {
                 collect_from_value(template, out, effective_pod_sc);
@@ -189,6 +225,42 @@ fn find_containers_array(map: &Mapping) -> Option<&serde_yaml::Sequence> {
         if let Some(spec_map) = spec.as_mapping() {
             if let Some(c) = map_get(spec_map, "containers") {
                 return c.as_sequence();
+            }
+        }
+    }
+    None
+}
+
+fn find_init_containers_array(map: &Mapping) -> Option<&serde_yaml::Sequence> {
+    if let Some(c) = map_get(map, "initContainers") {
+        return c.as_sequence();
+    }
+    if let Some(spec) = map_get(map, "spec") {
+        if let Some(spec_map) = spec.as_mapping() {
+            if let Some(template) = map_get(spec_map, "template") {
+                if let Some(tmpl_map) = template.as_mapping() {
+                    if let Some(pod_spec) = map_get(tmpl_map, "spec") {
+                        if let Some(pod_map) = pod_spec.as_mapping() {
+                            if let Some(c) = map_get(pod_map, "initContainers") {
+                                return c.as_sequence();
+                            }
+                        }
+                    }
+                }
+            }
+            if let Some(c) = map_get(spec_map, "initContainers") {
+                return c.as_sequence();
+            }
+        }
+    }
+    if let Some(template) = map_get(map, "template") {
+        if let Some(tmpl_map) = template.as_mapping() {
+            if let Some(pod_spec) = map_get(tmpl_map, "spec") {
+                if let Some(pod_map) = pod_spec.as_mapping() {
+                    if let Some(c) = map_get(pod_map, "initContainers") {
+                        return c.as_sequence();
+                    }
+                }
             }
         }
     }
@@ -221,6 +293,7 @@ fn container_from_value(container: &Value, pod_security: Option<&Value>) -> Opti
 
     let container_sc = map_get(cmap, "securityContext");
     let run_as_root = container_runs_as_root(container_sc, pod_security);
+    let (privileged, allow_privilege_escalation) = container_privileged_flags(container_sc);
 
     let mut env_secret_names = Vec::new();
     if let Some(env) = map_get(cmap, "env").and_then(|e| e.as_sequence()) {
@@ -246,8 +319,23 @@ fn container_from_value(container: &Value, pod_security: Option<&Value>) -> Opti
         has_liveness,
         has_readiness,
         run_as_root,
+        privileged,
+        allow_privilege_escalation,
         env_secret_names,
     })
+}
+
+fn container_privileged_flags(container_sc: Option<&Value>) -> (bool, bool) {
+    let Some(sc) = container_sc.and_then(|v| v.as_mapping()) else {
+        return (false, false);
+    };
+    let privileged = map_get(sc, "privileged")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    let allow_privilege_escalation = map_get(sc, "allowPrivilegeEscalation")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    (privileged, allow_privilege_escalation)
 }
 
 fn entry_get_str(map: &Mapping, key: &str) -> Option<String> {
