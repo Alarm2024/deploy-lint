@@ -1,0 +1,9 @@
+[Unit]
+Description=Example worker
+
+[Service]
+ExecStart=/usr/local/bin/worker
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

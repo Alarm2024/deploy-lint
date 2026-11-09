@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: no-probes
+spec:
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 10001
+  containers:
+    - name: api
+      image: api:3.1.0
+      resources:
+        limits:
+          memory: 256Mi

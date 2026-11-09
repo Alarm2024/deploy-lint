@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: no-limits
+spec:
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 10001
+  containers:
+    - name: worker
+      image: worker:2.3.4
+      readinessProbe:
+        exec:
+          command: ["true"]
