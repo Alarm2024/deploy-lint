@@ -1,0 +1,52 @@
+name: Preflight
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install yamllint
+        run: pip install yamllint
+
+      - name: Lint YAML files
+        run: |
+          mapfile -t yaml_files < <(git ls-files '*.yml' '*.yaml')
+          if [ "${#yaml_files[@]}" -eq 0 ]; then
+            echo "No tracked YAML files to lint."
+            exit 0
+          fi
+          yamllint -c .yamllint.yml "${yaml_files[@]}"
+
+      - name: Reject inline credential-like keys
+        run: |
+          set -euo pipefail
+          pattern='(^|[^#[:alnum:]_-])(password|token):[[:space:]]+[^[:space:]#]+'
+          failed=0
+          while IFS= read -r path; do
+            [ -n "$path" ] || continue
+            while IFS= read -r line; do
+              file="${line%%:*}"
+              rest="${line#*:}"
+              lineno="${rest%%:*}"
+              echo "error: $file:$lineno: inline 'password:' or 'token:' value is not allowed"
+              failed=1
+            done < <(grep -nE "$pattern" "$path" || true)
+          done < <(git ls-files)
+          if [ "$failed" -ne 0 ]; then
+            echo "Preflight failed: remove non-empty inline password/token values from tracked files."
+            exit 1
+          fi
+          echo "No inline password/token values found."
