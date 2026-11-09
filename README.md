@@ -86,7 +86,7 @@ High-severity findings still yield exit code **1** so the job fails.
 cargo test
 ```
 
-Fixture tests live under `tests/fixtures/`. Pull requests run [`.github/workflows/preflight.yml`](.github/workflows/preflight.yml): `cargo test`, Preflight on changed deploy files, optional SARIF upload when code scanning is available, and inline PR review comments.
+Fixture tests live under `tests/fixtures/`. Pull requests run [`.github/workflows/preflight.yml`](.github/workflows/preflight.yml): `cargo test`, Preflight on changed deploy files (excluding intentional `demo/bad/`), optional SARIF upload when code scanning is available, and inline PR review comments.
 
 ## License
 

@@ -38,7 +38,8 @@ jobs:
           set -euo pipefail
           mapfile -t FILES < <(
             git diff --name-only "${{ github.event.pull_request.base.sha }}" HEAD \
-              | grep -E '(Dockerfile|dockerfile|Containerfile|containerfile|\.ya?ml|\.service)$' || true
+              | grep -E '(Dockerfile|dockerfile|Containerfile|containerfile|\.ya?ml|\.service)$' \
+              | grep -v '^demo/bad/' || true
           )
           if [[ ${#FILES[@]} -eq 0 ]]; then
             echo "No deploy files changed in this PR."
@@ -91,7 +92,8 @@ jobs:
           chmod +x .github/scripts/post-preflight-pr-comments.sh
           mapfile -t FILES < <(
             git diff --name-only "${{ github.event.pull_request.base.sha }}" HEAD \
-              | grep -E '(Dockerfile|dockerfile|Containerfile|containerfile|\.ya?ml|\.service)$' || true
+              | grep -E '(Dockerfile|dockerfile|Containerfile|containerfile|\.ya?ml|\.service)$' \
+              | grep -v '^demo/bad/' || true
           )
           if [[ ${#FILES[@]} -eq 0 ]]; then
             echo "No deploy files to comment on."
