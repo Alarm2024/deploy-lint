@@ -1,0 +1,10 @@
+[Unit]
+Description=Non-root with NoNewPrivileges
+
+[Service]
+User=app
+NoNewPrivileges=yes
+ExecStart=/usr/bin/app
+
+[Install]
+WantedBy=multi-user.target

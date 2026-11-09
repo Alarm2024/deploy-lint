@@ -36,10 +36,11 @@ Each finding includes **rule id**, **severity**, **file**, **line**, **reason**,
 | DL004 | medium | Kubernetes container missing `resources.limits` |
 | DL005 | medium | No health check (Dockerfile `HEALTHCHECK`; Kubernetes `livenessProbe` or `readinessProbe`) |
 | DL006 | medium | systemd `Restart=always` without `RestartSec` or `StartLimitBurst` backoff |
+| DL008 | high / medium | systemd `[Service]`: high when `User=` is missing or `root` without sandboxing (`NoNewPrivileges`, `ProtectSystem`, or `DynamicUser`); medium when a non-root `User=` lacks `NoNewPrivileges=yes` |
 
 Exit code **1** if any **high** severity finding is present; **0** otherwise. Missing paths exit **2**.
 
-Gitar review hints for the same six rules: [`.gitar/review/preflight.md`](.gitar/review/preflight.md).
+Gitar review hints for the same seven rules: [`.gitar/review/preflight.md`](.gitar/review/preflight.md).
 
 ## Install
 

@@ -86,6 +86,61 @@ rule_good!(
     "DL006"
 );
 
+rule_bad!(
+    dl008_no_user_bad,
+    "systemd/dl008-no-user-bad.service",
+    "DL008"
+);
+rule_bad!(
+    dl008_root_bad,
+    "systemd/dl008-root-bad.service",
+    "DL008"
+);
+rule_bad!(
+    dl008_spacing_root_bad,
+    "systemd/dl008-spacing-root-bad.service",
+    "DL008"
+);
+rule_good!(
+    dl008_root_sandbox_good,
+    "systemd/dl008-root-sandbox-good.service",
+    "DL008"
+);
+rule_good!(
+    dl008_nonroot_priv_good,
+    "systemd/dl008-nonroot-priv-good.service",
+    "DL008"
+);
+rule_good!(
+    dl008_dynamic_good,
+    "systemd/dl008-dynamic-good.service",
+    "DL008"
+);
+rule_good!(
+    dl008_comments_good,
+    "systemd/dl008-comments-good.service",
+    "DL008"
+);
+rule_bad!(
+    dl008_nonroot_medium_bad,
+    "systemd/dl008-nonroot-medium-bad.service",
+    "DL008"
+);
+
+#[test]
+fn dl008_nonroot_medium_is_not_high() {
+    let findings = lint_path(&fixture("systemd/dl008-nonroot-medium-bad.service")).expect("lint");
+    let dl008: Vec<_> = findings.iter().filter(|f| f.rule_id == "DL008").collect();
+    assert_eq!(dl008.len(), 1);
+    assert_eq!(dl008[0].severity, deploy_lint::Severity::Medium);
+}
+
+#[test]
+fn dl008_malformed_unit_does_not_panic() {
+    let path = fixture("systemd/dl008-malformed.service");
+    let _ = lint_path(&path).expect("lint must not error on malformed unit");
+}
+
 #[test]
 fn dl003_docker_secret_bad_masks_value_in_json() {
     use assert_cmd::Command;

@@ -1,35 +1,21 @@
-# Cursor agent report — Preflight step 2
+# Cursor agent report — Preflight step 3 PR B (DL008)
 
 **Repository:** Alarm2024/deploy-lint  
-**Branch:** `cursor/deploy-lint-cli-f9ab`  
-**Commit:** `7226cc3` (after push)
+**Branch:** `cursor/dl008-systemd-root-52b7`  
+**Base:** `cursor/deploy-lint-cli-f9ab`
 
-## What changed
+## Change summary
 
-| Area | Change |
-|------|--------|
-| Binary / CLI | `deploy-lint` → **`preflight`** (`Cargo.toml` `[[bin]]`, Clap `name = "preflight"`) |
-| README | Title **Preflight**; repo name remains **deploy-lint** |
-| Output | `--json` (existing), new **`--sarif`**, new **`--ci`** (line + `::error` annotation per finding) |
-| CI | `.github/workflows/preflight.yml` — `cargo test`, scan PR changed deploy files, SARIF upload with `continue-on-error`, PR inline comments |
-| Gitar | `.gitar/review/preflight.md` — six rules in plain English |
-| Demo | `demo/bad/` vs `demo/fixed/` for fictional **schedule-app** |
+- **DL008**: systemd `[Service]` hardening — high when missing/`root` `User=` without sandboxing; medium when non-root `User=` lacks `NoNewPrivileges=yes`.
+- Fixture tests: no User, User=root, spaced `User = root`, root+sandbox, non-root+NoNewPrivileges, DynamicUser, comments/whitespace, medium-only case, malformed unit (no panic).
+- `demo/bad/app.service` already omits `User=` (triggers DL008 high with DL006).
 
-No runtime network use. DL003 never prints secret **values** (verified in JSON, SARIF, and `--ci` tests/output).
-
-## Rule IDs (exact)
-
-1. `DL001` — non-root / runAsNonRoot (high)  
-2. `DL002` — pinned image tag (high)  
-3. `DL003` — no secret literals in env (high)  
-4. `DL004` — Kubernetes resource limits (medium)  
-5. `DL005` — health probes / HEALTHCHECK (medium)  
-6. `DL006` — systemd restart backoff (medium)  
+*Note:* DL007 is implemented on branch `cursor/dl007-kubernetes-privileged-52b7` (separate draft PR). After both merge, the ruleset has **8** checks (DL001–DL008, excluding unassigned DL007 slot only if renumbered — currently DL007 is the other PR).
 
 ## Test output (`cargo test`)
 
 ```
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.02s
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.98s
      Running unittests src/lib.rs (target/debug/deps/deploy_lint-0da49bb386932f75)
 
 running 2 tests
@@ -47,43 +33,53 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
      Running tests/cli.rs (target/debug/deps/cli-bd88d6e718d5b3ae)
 
 running 6 tests
-test ci_flag_emits_line_and_annotation ... ok
-test json_flag_emits_json ... ok
 test exits_one_when_high_severity ... ok
 test exits_zero_when_no_high_severity ... ok
+test ci_flag_emits_line_and_annotation ... ok
 test scans_directory_recursively ... ok
+test json_flag_emits_json ... ok
 test sarif_flag_emits_sarif ... ok
 
 test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
      Running tests/rule_fixtures.rs (target/debug/deps/rule_fixtures-5e924337605702f3)
 
-running 23 tests
+running 33 tests
 test dl001_docker_root_good ... ok
 test dl001_docker_root_bad ... ok
+test dl001_k8s_root_bad ... ok
 test dl002_docker_latest_bad ... ok
 test dl002_docker_latest_good ... ok
 test dl002_docker_untagged_bad ... ok
 test dl001_k8s_root_good ... ok
-test dl001_k8s_root_bad ... ok
 test dl002_k8s_latest_bad ... ok
+test dl002_k8s_latest_good ... ok
 test dl003_docker_secret_bad ... ok
 test dl003_docker_secret_good ... ok
-test dl003_k8s_secret_bad ... ok
-test dl002_k8s_latest_good ... ok
 test dl003_k8s_secret_good ... ok
+test dl003_k8s_secret_bad ... ok
+test dl004_k8s_limits_bad ... ok
 test dl004_k8s_limits_good ... ok
+test dl003_k8s_secret_bad_masks_value_in_json ... ok
 test dl005_docker_health_bad ... ok
 test dl005_docker_health_good ... ok
 test dl003_docker_secret_bad_masks_value_in_json ... ok
-test dl004_k8s_limits_bad ... ok
 test dl005_k8s_probe_bad ... ok
-test dl006_systemd_restart_bad ... ok
-test dl006_systemd_restart_good ... ok
 test dl005_k8s_probe_good ... ok
-test dl003_k8s_secret_bad_masks_value_in_json ... ok
+test dl006_systemd_restart_bad ... ok
+test dl008_comments_good ... ok
+test dl008_dynamic_good ... ok
+test dl008_malformed_unit_does_not_panic ... ok
+test dl008_no_user_bad ... ok
+test dl008_nonroot_medium_is_not_high ... ok
+test dl008_nonroot_medium_bad ... ok
+test dl008_nonroot_priv_good ... ok
+test dl008_root_bad ... ok
+test dl008_root_sandbox_good ... ok
+test dl008_spacing_root_bad ... ok
+test dl006_systemd_restart_good ... ok
 
-test result: ok. 23 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
    Doc-tests deploy_lint
 
@@ -92,7 +88,7 @@ running 0 tests
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 ```
 
-**Total automated tests:** 31 passed (2 lib unit + 6 CLI + 23 fixtures).
+**Total automated tests:** 41 passed (2 lib + 6 CLI + 33 fixtures).
 
 ### Demo smoke
 
@@ -102,21 +98,5 @@ No findings.
 # exit 0
 
 $ cargo run --quiet -- demo/bad
-# exit 1 (high findings present)
+# exit 1 (high findings including DL008 on app.service)
 ```
-
-## Pull request
-
-**Draft PR** (per instructions: no merge, no ready-for-review).
-
-Create / open from:
-
-https://github.com/Alarm2024/deploy-lint/compare/main...cursor/deploy-lint-cli-f9ab?expand=1
-
-Suggested title: *Preflight CLI: SARIF, CI annotations, demo, and GitHub Actions* (mark as **draft**).
-
-If your Cursor PR automation already queued this branch, use that draft PR URL once it appears.
-
-## Spec source
-
-Checklist from uploaded preflight step-2 brief (`cursor-preflight-step2_2_fc7c.md`).

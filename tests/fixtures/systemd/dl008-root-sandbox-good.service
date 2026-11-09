@@ -1,0 +1,10 @@
+[Unit]
+Description=Root name but sandboxed
+
+[Service]
+User=root
+NoNewPrivileges=yes
+ExecStart=/usr/bin/app
+
+[Install]
+WantedBy=multi-user.target

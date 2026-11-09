@@ -1,0 +1,9 @@
+[Unit]
+Description=Broken unit
+
+[Service
+ExecStart=/usr/bin/app
+User====
+
+[Install]
+WantedBy=multi-user.target

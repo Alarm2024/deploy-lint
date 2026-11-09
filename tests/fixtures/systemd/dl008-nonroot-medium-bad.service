@@ -1,0 +1,10 @@
+[Unit]
+Description=Non-root without NoNewPrivileges (medium)
+
+[Service]
+User=appuser
+ProtectSystem=strict
+ExecStart=/usr/bin/app
+
+[Install]
+WantedBy=multi-user.target

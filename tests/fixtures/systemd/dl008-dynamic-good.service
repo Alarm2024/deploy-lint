@@ -1,0 +1,9 @@
+[Unit]
+Description=Dynamic user
+
+[Service]
+DynamicUser=yes
+ExecStart=/usr/bin/app
+
+[Install]
+WantedBy=multi-user.target

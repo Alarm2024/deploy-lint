@@ -1,0 +1,8 @@
+[Unit]
+Description=No user set
+
+[Service]
+ExecStart=/usr/bin/app
+
+[Install]
+WantedBy=multi-user.target

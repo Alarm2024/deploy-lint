@@ -26,6 +26,15 @@ Dockerfiles should define a `HEALTHCHECK`. Kubernetes workloads should define `l
 
 If a unit uses `Restart=always`, set backoff such as `RestartSec` and/or `StartLimitBurst` to avoid tight restart loops.
 
+## DL008 — systemd root and sandboxing (high / medium)
+
+In the `[Service]` section:
+
+- **High** when `User=` is missing or `User=root` (spacing around `=` is allowed) and none of: `NoNewPrivileges=yes`, `ProtectSystem=strict|full|yes`, `DynamicUser=yes`.
+- **Medium** when `User=` names a non-root account but `NoNewPrivileges` is not set to `yes`.
+
+Prefer `User=<service>`, `NoNewPrivileges=yes`, `ProtectSystem=strict`, and `PrivateTmp=yes`.
+
 ## Severity and CI
 
 Any **high** finding must fail the Preflight step (non-zero exit) so the build turns red. Medium findings are reported but do not fail the job unless your team policy says otherwise.

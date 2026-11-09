@@ -1,0 +1,11 @@
+[Unit]
+Description=Comments and extra whitespace
+
+[Service]
+User=svc          # service account
+NoNewPrivileges=yes
+ProtectSystem=strict
+ExecStart=/usr/bin/app
+
+[Install]
+WantedBy=multi-user.target

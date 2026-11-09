@@ -1,0 +1,9 @@
+[Unit]
+Description=Runs as root
+
+[Service]
+User=root
+ExecStart=/usr/bin/app
+
+[Install]
+WantedBy=multi-user.target
